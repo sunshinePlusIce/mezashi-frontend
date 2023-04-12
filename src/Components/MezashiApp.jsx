@@ -8,13 +8,21 @@ import {
   CheckOutlined, 
   UserOutlined, 
   FlagOutlined,
-  DownOutlined
+  DownOutlined,
+  TagsOutlined,
+  PlusOutlined
 } from '@ant-design/icons';
 import { useState, useContext, useEffect } from 'react';
 import AuthProvider from './security/AuthContext';
 import axios from 'axios';
 import MezashiTreeNode from './MezashiContentWrapper';
 import MezashiContentWrapper from './MezashiContentWrapper';
+import { titlecase } from '../utils/utils';
+import UserProfileComponent from './UserProfileComponent';
+import BreadcrumbItem from 'antd/es/breadcrumb/BreadcrumbItem';
+import TagInfoComponent from './TagInfoComponent';
+import CreateMezashiFormComponent from './CreateMezashiFormComponent';
+import CreateTagComponent from './CreateTagComponent';
 
 const { Header, Content, Sider } = Layout;
 const { TreeNode } = Tree;
@@ -26,9 +34,27 @@ function getItem(label, key, icon, children) {
       children,
       label,
     };
-  }
-  
-  
+}
+
+const BreadcrumDisplay = ({info}) => {
+  return (
+    <Breadcrumb
+      style={{
+        margin: '16px 0',
+      }}
+    >
+      {
+        info.split("_").map(breadcrum => {
+          return (
+            <Breadcrumb.Item>
+              {titlecase(breadcrum)}
+            </Breadcrumb.Item>
+          )
+        })
+      }
+    </Breadcrumb> 
+  ) 
+}
 
 const Main = () => {
     const [collapsed, setCollapsed] = useState(false);
@@ -36,9 +62,12 @@ const Main = () => {
     const [mezashiList, setMezashiList] = useState([]);
     const [currentMenuItem, setCurrentMenuItem] = useState('');
     const [currentMezashi, setCurrentMezashi] = useState({});
+    const [userInfo, setUserInfo] = useState({});
+
     const client = axios.create({
       baseURL: `${process.env.REACT_APP_API_URL}`
     });
+
     // update mezashiList to a format that tree accepts
     // mList is a list holding mezashi
     // prefixKeys is a list helping to generating keys, just start with []
@@ -59,8 +88,9 @@ const Main = () => {
 
     useEffect(() => {
       const fetchMezashiList = async () => {
-        let response = await client.get(`users/1/mezashi`);
-        let mezashiData = response.data;
+        let response = await client.get(`users/1`);
+        let mezashiData = response.data.mezashiList;
+        setUserInfo(response.data);
         let childrenId = [];
         updateMezashiList(mezashiData, [], childrenId);
         mezashiData = mezashiData.filter(mezashi => !childrenId.includes(mezashi.id)) 
@@ -68,7 +98,10 @@ const Main = () => {
           getItem('Profile', 'profile', <UserOutlined />), 
           getItem('Mezashi', 'mezashi', <FlagOutlined />, mezashiData.map((item, index) => { 
               return getItem(item.name, index, item.done ? <CheckOutlined /> : <ClockCircleOutlined />)
-          }))
+          })),
+          getItem('Tags', 'tags', <TagsOutlined />),
+          getItem('Create Mezashi', 'create_mezashi', <PlusOutlined />),
+          getItem('Create Tag', 'create_tag', <PlusOutlined />)
         ])
         setMezashiList(mezashiData);
       }
@@ -76,8 +109,8 @@ const Main = () => {
     }, [])
     const handleMenuOnClick = ({ item, key, keyPath}) => {
       // handle click on profile
-      if (keyPath.length === 1 && keyPath[keyPath.length-1] === 'profile') {
-        setCurrentMenuItem('profile');
+      if (keyPath.length === 1) {
+        setCurrentMenuItem(keyPath[keyPath.length - 1]);
       }
       // handle click on mezashi list
       if (keyPath.length > 1 && keyPath[keyPath.length-1] === 'mezashi') {
@@ -133,15 +166,17 @@ const Main = () => {
           <Content style={{
             margin: '0 16px'
           }}>
-            <Breadcrumb
-              style={{
-                margin: '16px 0',
-              }}
-            >
-              <Breadcrumb.Item>User</Breadcrumb.Item>
-              <Breadcrumb.Item>Bill</Breadcrumb.Item>
-            </Breadcrumb>
-  
+            {
+              ['mezashi', 'profile'].includes(currentMenuItem) 
+              ? (<BreadcrumDisplay info={
+                  currentMenuItem === 'mezashi' 
+                  ? `${currentMenuItem}_${currentMezashi.id}` 
+                  : `${currentMenuItem}_${userInfo.id}`
+                } />)
+              : (
+                <BreadcrumDisplay info={currentMenuItem} />
+              )
+            }
             <div
               style={{
                 padding: 24,
@@ -149,12 +184,27 @@ const Main = () => {
                 background: colorBgContainer,
               }}
             >
-              <Tree
-                showLine
-                switcherIcon={<DownOutlined />}
-              >
-                {currentMenuItem === 'mezashi' && renderTree([currentMezashi])}
-              </Tree>
+              {
+                currentMenuItem === 'mezashi' && (
+                  <>
+                    <Tree
+                      showLine
+                      switcherIcon={<DownOutlined />}
+                    >
+                      {currentMenuItem === 'mezashi' && renderTree([currentMezashi])}
+                    </Tree>
+                  </>
+                )
+              }
+              {currentMenuItem === 'profile' && <UserProfileComponent user={userInfo} /> }
+              {currentMenuItem === 'tags' && <TagInfoComponent tags={userInfo.tags} />}
+              {currentMenuItem === 'create_mezashi' && 
+                <CreateMezashiFormComponent 
+                      mezashiList={mezashiList} 
+                      tags={userInfo.tags} />}
+              {currentMenuItem === 'create_tag' && 
+                <CreateTagComponent tags={userInfo.tags} />
+              }
             </div>
           </Content>
           <Footer />
