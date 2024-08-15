@@ -28,7 +28,7 @@ export default function MezashiContentWrapper({mezashi}) {
             <Space size={[0, mezashi.tags.length]} className="mezashi-tags" wrap>
                 {
                     mezashi.tags.map(tag => {
-                        return <Tag color={tag.tagColor.toLowerCase()}>{tag.name}</Tag>
+                        return <Tag color={tag.tagColor}>{tag.name}</Tag>
                     })
                 }
             </Space>

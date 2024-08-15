@@ -14,13 +14,15 @@ export const CompleteConditionArray = [
 ]
 
 export const DefaultTags = [
-    {
-        name: "work",
-        tagColor: "BLUE"
-    }, {
-        name: "life",
-        tagColor: "CYAN"
-    }
+    // {
+    //     name: "work",
+    //     tagColor: "BLUE",
+    //     id: 1
+    // }, {
+    //     name: "life",
+    //     tagColor: "CYAN",
+    //     id: 2
+    // }
 ]
 
 export const supportedColors = {
@@ -49,3 +51,4 @@ export const supportedColorsArray = [
     supportedColors.PURPLE
 ]
 
+export const MEZASHI_NAME_MAX_LENGTH=64

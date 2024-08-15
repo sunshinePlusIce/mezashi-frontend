@@ -1,7 +1,7 @@
 import {BrowserRouter, Routes, Route, Navigate} from 'react-router-dom'
 import AuthenticatedRoute from './security/AuthenticatedRoute'
 import Login from './Login'
-import { theme, Layout, Menu, Breadcrumb, Tree} from 'antd';
+import { theme, Layout, Menu, Breadcrumb, Tree, Image, Divider} from 'antd';
 import Footer from './Footer';
 import { 
   ClockCircleOutlined, 
@@ -12,17 +12,17 @@ import {
   TagsOutlined,
   PlusOutlined
 } from '@ant-design/icons';
-import { useState, useContext, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import AuthProvider from './security/AuthContext';
 import axios from 'axios';
-import MezashiTreeNode from './MezashiContentWrapper';
 import MezashiContentWrapper from './MezashiContentWrapper';
 import { titlecase } from '../utils/utils';
 import UserProfileComponent from './UserProfileComponent';
-import BreadcrumbItem from 'antd/es/breadcrumb/BreadcrumbItem';
 import TagInfoComponent from './TagInfoComponent';
 import CreateMezashiFormComponent from './CreateMezashiFormComponent';
 import CreateTagComponent from './CreateTagComponent';
+import logo from '../images/mezashi-logo.png'
+import HelpComponent from './HelpComponent';
 
 const { Header, Content, Sider } = Layout;
 const { TreeNode } = Tree;
@@ -65,7 +65,7 @@ const Main = () => {
     const [userInfo, setUserInfo] = useState({});
 
     const client = axios.create({
-      baseURL: `${process.env.REACT_APP_API_URL}`
+      baseURL: `http://localhost:8080`
     });
 
     // update mezashiList to a format that tree accepts
@@ -86,28 +86,31 @@ const Main = () => {
       token: { colorBgContainer }
     } = theme.useToken();
 
+    const fetchMezashiList = async () => {
+      let response = await client.get(`users/1`);
+      let mezashiData = response.data.mezashiList;
+      setUserInfo(response.data);
+      let childrenId = [];
+      updateMezashiList(mezashiData, [], childrenId);
+      mezashiData = mezashiData.filter(mezashi => !childrenId.includes(mezashi.id)) 
+      setMenuItems([
+        getItem('Profile', 'profile', <UserOutlined />), 
+        getItem('Mezashi', 'mezashi', <FlagOutlined />, mezashiData.map((item, index) => { 
+            return getItem(item.name, index, item.done ? <CheckOutlined /> : <ClockCircleOutlined />)
+        })),
+        getItem('Tags', 'tags', <TagsOutlined />),
+        getItem('Create Mezashi', 'create_mezashi', <PlusOutlined />),
+        getItem('Create Tag', 'create_tag', <PlusOutlined />)
+      ])
+      setMezashiList(mezashiData);
+    }
+
     useEffect(() => {
-      const fetchMezashiList = async () => {
-        let response = await client.get(`users/1`);
-        let mezashiData = response.data.mezashiList;
-        setUserInfo(response.data);
-        let childrenId = [];
-        updateMezashiList(mezashiData, [], childrenId);
-        mezashiData = mezashiData.filter(mezashi => !childrenId.includes(mezashi.id)) 
-        setMenuItems([
-          getItem('Profile', 'profile', <UserOutlined />), 
-          getItem('Mezashi', 'mezashi', <FlagOutlined />, mezashiData.map((item, index) => { 
-              return getItem(item.name, index, item.done ? <CheckOutlined /> : <ClockCircleOutlined />)
-          })),
-          getItem('Tags', 'tags', <TagsOutlined />),
-          getItem('Create Mezashi', 'create_mezashi', <PlusOutlined />),
-          getItem('Create Tag', 'create_tag', <PlusOutlined />)
-        ])
-        setMezashiList(mezashiData);
-      }
       fetchMezashiList();
     }, [])
-    const handleMenuOnClick = ({ item, key, keyPath}) => {
+
+    const handleMenuOnClick = async ({ item, key, keyPath}) => {
+      await fetchMezashiList();
       // handle click on profile
       if (keyPath.length === 1) {
         setCurrentMenuItem(keyPath[keyPath.length - 1]);
@@ -118,6 +121,7 @@ const Main = () => {
         let mezashiIndex = Number(keyPath[keyPath.length - 2]);
         setCurrentMezashi(mezashiList[mezashiIndex]);
       }
+
     }
 
     const renderTree = (mList) => {
@@ -140,14 +144,12 @@ const Main = () => {
         minHeight: '100vh'
       }}>
         <Sider collapsible collapsed={collapsed} onCollapse={(value)=>setCollapsed(value)}>
+          <Image 
+            width={180}
+            src={logo}
+            preview={false}
+            />
 
-          <div
-            style={{
-              height: 32,
-              margin: 16,
-              background: 'rgba(255, 255, 255, 0.2)',
-            }}
-          />
           <Menu 
             theme="dark" 
             defaultSelectedKeys={['1']} 
@@ -206,6 +208,7 @@ const Main = () => {
                 <CreateTagComponent tags={userInfo.tags} />
               }
             </div>
+            
           </Content>
           <Footer />
         </Layout>
@@ -220,10 +223,8 @@ export default function MezashiApp() {
             <AuthProvider>
                 <BrowserRouter>
                     <Routes>
-                        <Route path='/' element={
-                            <AuthenticatedRoute to='/login'>
+                        <Route path='/dashboard' element={
                                 <Main />
-                            </AuthenticatedRoute>
                         }>
                         </Route>
                         <Route path='/login' element={<Login/>} />
